@@ -12,6 +12,7 @@ import DashA from './component/Admin/DashA';
 import EventList from './component/Admin/EventList';
 import ChangeInfo from './component/Admin/ChangeInfo';
 import UserForm from './component/User/UserForm';
+import UserList from './component/Admin/UserList';
 
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
       <Route path='admin' element={<DashA/>}/>
       <Route path='Event-List' element={<EventList/>}/>
       <Route path='change-info' element={<ChangeInfo/>}/>
+      <Route path='userlist' element={<UserList/>}/>
 
       </Route>
        

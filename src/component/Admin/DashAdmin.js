@@ -13,6 +13,7 @@ function DashAdmin() {
     <ul>
       <li><Link to='admin'>Dashboard</Link></li>
       <li><Link to='change-info'>Change Info</Link></li>
+      <li><Link to='userlist' >user list</Link></li>
       <li><Link to='Event-List'>Event List</Link></li>
       <li><Link to='/'>logout</Link></li>
     </ul>
