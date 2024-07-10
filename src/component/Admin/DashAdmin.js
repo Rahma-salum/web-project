@@ -4,7 +4,7 @@ function DashAdmin() {
   return (
     <>
       <div className="header">
-        <h1>LOCAL HISTORY OF ZANZIBAR</h1>
+        <h1>MANGAPWANI</h1>
       </div>
       <div className="navigation">
   <header>

@@ -5,7 +5,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 const UserList = () => {
   const [users, setUsers] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editMode, setEditMode] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [newUser, setNewUser] = useState({
     userName: '',
     email: '',
@@ -13,8 +13,8 @@ const UserList = () => {
     phoneNumber: '',
     password: ''
   });
-  const [currentUser, setCurrentUser] = useState({
-    userId: null,
+  const [editUser, setEditUser] = useState({
+    userId: '',
     userName: '',
     email: '',
     address: '',
@@ -23,13 +23,13 @@ const UserList = () => {
   });
 
   useEffect(() => {
-    fetchData(); // Call fetchData function when component mounts
-  }, []); // Empty dependency array ensures useEffect runs only once
+    fetchData();
+  }, []);
 
   const fetchData = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/all/User');
-      setUsers(response.data); // Assuming response.data is an array of user objects
+      const response = await axios.get('http://localhost:8080/all/users');
+      setUsers(response.data);
     } catch (error) {
       console.error('Error fetching data:', error);
     }
@@ -37,8 +37,8 @@ const UserList = () => {
 
   const deleteUser = async (userId) => {
     try {
-      await axios.delete(`http://localhost:8080/Delete/user${userId}`);
-      fetchData(); // Refresh data after deletion
+      await axios.delete(`http://localhost:8080/delete/user/${userId}`);
+      fetchData();
     } catch (error) {
       console.error('Error deleting user:', error);
     }
@@ -46,51 +46,45 @@ const UserList = () => {
 
   const handleAddUser = async () => {
     try {
-      if (editMode) {
-        await axios.put(`http://localhost:8080/Update/user${currentUser.userId}`, currentUser);
-      } else {
-        await axios.post('http://localhost:8080/add/user', newUser);
-      }
-      setShowAddModal(false); // Close modal after adding user
-      setEditMode(false);
-      setNewUser({ // Reset newUser state after adding user
+      await axios.post('http://localhost:8080/add/user', newUser);
+      setShowAddModal(false);
+      setNewUser({
         userName: '',
         email: '',
         address: '',
         phoneNumber: '',
         password: ''
       });
-      setCurrentUser({
-        userId: null,
-        userName: '',
-        email: '',
-        address: '',
-        phoneNumber: '',
-        password: ''
-      });
-      fetchData(); // Refresh data after adding user
+      fetchData();
     } catch (error) {
-      console.error('Error adding/updating user:', error);
+      console.error('Error adding user:', error);
     }
   };
 
-  const handleEditUser = (user) => {
-    setCurrentUser({
-      userId: user.userId,
-      userName: user.userName,
-      email: user.email,
-      address: user.address,
-      phoneNumber: user.phoneNumber,
-      password: user.password
-    });
-    setEditMode(true);
-    setShowAddModal(true); // Open modal for editing
+  const handleEditUser = async () => {
+    try {
+      await axios.put(`http://localhost:8080/update/user/${editUser.userId}`, editUser);
+      setShowEditModal(false);
+      setEditUser({
+        userId: '',
+        userName: '',
+        email: '',
+        address: '',
+        phoneNumber: '',
+        password: ''
+      });
+      alert("User updated successfully");
+      fetchData();
+    } catch (error) {
+      console.error('Error updating user:', error);
+      alert('Failed to update user');
+    }
   };
 
-  const handleChange = (e) => {
+  const handleChange = (e, isEdit = false) => {
     const { name, value } = e.target;
-    if (editMode) {
-      setCurrentUser(prevState => ({
+    if (isEdit) {
+      setEditUser(prevState => ({
         ...prevState,
         [name]: value
       }));
@@ -100,6 +94,15 @@ const UserList = () => {
         [name]: value
       }));
     }
+  };
+
+  const formatPhoneNumber = (phoneNumber) => {
+    const cleaned = ('' + phoneNumber).replace(/\D/g, '');
+    const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/);
+    if (match) {
+      return '(' + match[1] + ') ' + match[2] + '-' + match[3];
+    }
+    return phoneNumber;
   };
 
   return (
@@ -127,11 +130,11 @@ const UserList = () => {
                   <td>{user.userName}</td>
                   <td>{user.email}</td>
                   <td>{user.address}</td>
-                  <td>{user.phoneNumber}</td>
+                  <td>{formatPhoneNumber(user.phoneNumber)}</td>
                   <td>{user.password}</td>
                   <td>
-                    <button onClick={() => handleEditUser(user)}>Edit</button>
-                    <button onClick={() => deleteUser(user.userId)}>Delete</button>
+                    <button className="btn btn-warning" onClick={() => { setEditUser(user); setShowEditModal(true); }}>Edit</button>
+                    <button className="btn btn-danger ml-2" onClick={() => deleteUser(user.userId)}>Delete</button>
                   </td>
                 </tr>
               ))}
@@ -145,19 +148,8 @@ const UserList = () => {
         <div className="modal-dialog" role="document">
           <div className="modal-content">
             <div className="modal-header">
-              <h5 className="modal-title">{editMode ? 'Edit User' : 'Add User'}</h5>
-              <button type="button" className="close" aria-label="Close" onClick={() => {
-                setShowAddModal(false);
-                setEditMode(false);
-                setCurrentUser({
-                  userId: null,
-                  userName: '',
-                  email: '',
-                  address: '',
-                  phoneNumber: '',
-                  password: ''
-                });
-              }}>
+              <h5 className="modal-title">Add User</h5>
+              <button type="button" className="close" aria-label="Close" onClick={() => setShowAddModal(false)}>
                 <span aria-hidden="true">&times;</span>
               </button>
             </div>
@@ -165,40 +157,71 @@ const UserList = () => {
               <form>
                 <div className="form-group">
                   <label>Username</label>
-                  <input type="text" className="form-control" name="userName" value={editMode ? currentUser.userName : newUser.userName} onChange={handleChange} />
+                  <input type="text" className="form-control" name="userName" value={newUser.userName} onChange={handleChange} />
                 </div>
                 <div className="form-group">
                   <label>Email</label>
-                  <input type="email" className="form-control" name="email" value={editMode ? currentUser.email : newUser.email} onChange={handleChange} />
+                  <input type="email" className="form-control" name="email" value={newUser.email} onChange={handleChange} />
                 </div>
                 <div className="form-group">
                   <label>Address</label>
-                  <input type="text" className="form-control" name="address" value={editMode ? currentUser.address : newUser.address} onChange={handleChange} />
+                  <input type="text" className="form-control" name="address" value={newUser.address} onChange={handleChange} />
                 </div>
                 <div className="form-group">
                   <label>Phone Number</label>
-                  <input type="text" className="form-control" name="phoneNumber" value={editMode ? currentUser.phoneNumber : newUser.phoneNumber} onChange={handleChange} />
+                  <input type="text" className="form-control" name="phoneNumber" value={newUser.phoneNumber} onChange={handleChange} />
                 </div>
                 <div className="form-group">
                   <label>Password</label>
-                  <input type="password" className="form-control" name="password" value={editMode ? currentUser.password : newUser.password} onChange={handleChange} />
+                  <input type="password" className="form-control" name="password" value={newUser.password} onChange={handleChange} />
                 </div>
               </form>
             </div>
             <div className="modal-footer">
-              <button type="button" className="btn btn-primary" onClick={handleAddUser}>{editMode ? 'Update' : 'Add'}</button>
-              <button type="button" className="btn btn-secondary" onClick={() => {
-                setShowAddModal(false);
-                setEditMode(false);
-                setCurrentUser({
-                  userId: null,
-                  userName: '',
-                  email: '',
-                  address: '',
-                  phoneNumber: '',
-                  password: ''
-                });
-              }}>Close</button>
+              <button type="button" className="btn btn-primary" onClick={handleAddUser}>Add</button>
+              <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Edit User Modal */}
+      <div className={`modal ${showEditModal ? 'show' : ''}`} tabIndex="-1" role="dialog" style={{ display: showEditModal ? 'block' : 'none' }}>
+        <div className="modal-dialog" role="document">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title">Edit User</h5>
+              <button type="button" className="close" aria-label="Close" onClick={() => setShowEditModal(false)}>
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div className="modal-body">
+              <form>
+                <div className="form-group">
+                  <label>Username</label>
+                  <input type="text" className="form-control" name="userName" value={editUser.userName} onChange={(e) => handleChange(e, true)} />
+                </div>
+                <div className="form-group">
+                  <label>Email</label>
+                  <input type="email" className="form-control" name="email" value={editUser.email} onChange={(e) => handleChange(e, true)} />
+                </div>
+                <div className="form-group">
+                  <label>Address</label>
+                  <input type="text" className="form-control" name="address" value={editUser.address} onChange={(e) => handleChange(e, true)} />
+                </div>
+                <div className="form-group">
+                  <label>Phone Number</label>
+                  <input type="text" className="form-control" name="phoneNumber" value={editUser.phoneNumber} onChange={(e) => handleChange(e, true)} />
+                </div>
+                <div className="form-group">
+                  <label>Password</label>
+                  <input type="password" className="form-control" name="password" value={editUser.password} onChange={(e) => handleChange(e, true)} />
+                </div>
+              </form>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn btn-primary" onClick={handleEditUser}>Save</button>
+              <button type="button" className="btn btn-secondary" onClick={() => setShowEditModal(false)}>Close</button>
             </div>
           </div>
         </div>
